@@ -1,0 +1,40 @@
+<!-- File uploader -->
+<p-accordion (onOpen)="accordionFileUploadSelected=true" (onClose)="accordionFileUploadSelected=false">
+    <p-accordionTab header="Select a file" [selected]="accordionFileUploadSelected">
+        <p-fileUpload id="fileSelector" chooseLabel="Choose" accept="*.pqb" [customUpload]="true" [auto]="true" (uploadHandler)="customUploader($event)">
+            <ng-template pTemplate="toolbar">
+                <div class="py-3">Upload a pleco database file (.pqb)</div>
+            </ng-template>
+        </p-fileUpload>
+    </p-accordionTab>
+</p-accordion>
+
+<!-- Options and selectors -->
+<ng-container *ngIf="scoreFileService.scorefiles.length > 0">
+    <p-divider></p-divider>
+    <p-card>
+        <div class="formgrid grid">
+            <div class="field col">
+                <label for="scoreFile">Select scorefile:</label>
+                <p-dropdown id="scoreFile" (onChange)="scoreFileService.listReviewedCards()" [options]="scoreFileService.scorefiles" [(ngModel)]="scoreFileService.selectedScorefile" optionLabel="name"></p-dropdown>
+            </div>
+            <div class="field col">
+                <label for="scoreCardLearned">Cards are learned if score > </label>
+                <p-inputNumber id="scoreCardLearned" (onInput)="scoreFileService.prepareCharts(scoreFileService.reviewedCards)"  inputId="integeronly" [(ngModel)]="scoreFileService.scoreCardLearned" [showButtons]="true" [allowEmpty]="false"> </p-inputNumber>
+            </div>
+        </div>
+    </p-card>
+</ng-container>
+
+<!-- Charts -->
+<ng-container *ngIf="scoreFileService.scorefiles.length > 0">
+    <p-divider></p-divider>
+    <p-card>
+        <p-chart type="line" [data]="scoreFileService.lineChartData" [options]="scoreFileService.lineChartOptions"></p-chart>
+        <p-divider></p-divider>
+        <p-chart type="bar" [data]="scoreFileService.barChartData" [options]="scoreFileService.barChartOptions"></p-chart>
+    </p-card>
+</ng-container>
+
+
+<p-toast></p-toast>
