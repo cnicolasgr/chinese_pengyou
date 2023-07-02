@@ -204,7 +204,7 @@ export class ScoreFileService
 
                             // get chinese character
                             let zi = reviewedCardsCopy.values[context.dataIndex].character;
-                            zi = zi.replace('@', '');
+                            zi = zi.replaceAll('@', '');
                             labelArray.push("Last character: " + zi);
                         }                   
                         return labelArray;
@@ -337,6 +337,41 @@ export class ScoreFileService
     {
         this.prepareLineChartData(reviewedCards);
         this.prepareBarChart(reviewedCards);
+    }
+
+    /**
+     * Get all the cards that were learned
+     * @returns 
+     */
+    getLearnedCards()
+    {
+        if (!this.selectedScorefile)
+        {
+            return;
+        }
+
+        if (!this.db)
+        {
+            return;
+        }
+
+        console.log("Get cards learned for scorefile " + this.selectedScorefile.name + "...")
+
+        const scoreTable = `pleco_flash_scores_${this.selectedScorefile.id}`
+        const sqlCommand = `
+        SELECT ${scoreTable}.score, pleco_flash_cards.hw
+        FROM ${scoreTable} 
+        INNER JOIN pleco_flash_cards ON ${scoreTable}.card=pleco_flash_cards.id 
+        WHERE score > ${this.scoreCardLearned};`
+
+        const res = this.db.exec(sqlCommand);
+
+        if (res.length > 0)
+        {
+            console.log(res);
+        }
+
+        return res;
     }
 }
 

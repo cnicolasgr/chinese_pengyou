@@ -1,11 +1,11 @@
 <!-- Toolbar -->
 <div class="toolbar" role="banner">
-  <p-tabView>
+  <p-tabView [(activeIndex)]="activeIndex">
     <p-tabPanel header="Dashboard">
-      <app-dashboard></app-dashboard>
+      <app-dashboard [(accordionFileUploadSelected)]="openAccordionFileUpload"></app-dashboard>
     </p-tabPanel>
     <p-tabPanel header="GPT laoshi">
-      <app-teacher></app-teacher>
+      <app-teacher (askToUploadDb)="askToUploadDb($event)"></app-teacher>
     </p-tabPanel>
 </p-tabView>
 </div>

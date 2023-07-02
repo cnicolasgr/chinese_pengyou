@@ -2,6 +2,7 @@ import { NgModule } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
 import { TeacherService } from 'src/modules/teacher/teacher.service';
+import { ScoreFileService } from 'src/modules/dashboard/scorefile.service'
 
 import { ScrollPanelModule } from 'primeng/scrollpanel';
 import { CardModule } from 'primeng/card';
@@ -12,11 +13,13 @@ import { ButtonModule } from 'primeng/button';
 import { AccordionModule } from 'primeng/accordion';
 
 import { TeacherComponent } from './teacher.component';
+import { HighlightPipe } from './highlight.pipe';
 
 
 @NgModule({
   declarations: [
-    TeacherComponent
+    TeacherComponent,
+    HighlightPipe
   ],
   imports: [
     FormsModule,
@@ -29,7 +32,8 @@ import { TeacherComponent } from './teacher.component';
     AccordionModule
   ],
   providers: [
-    TeacherService
+    TeacherService,
+    ScoreFileService
   ],
   exports: [
     TeacherComponent
