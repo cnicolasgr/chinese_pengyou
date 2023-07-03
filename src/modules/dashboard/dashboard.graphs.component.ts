@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { MessageService } from 'primeng/api';
 import { ScoreFileService } from './scorefile.service';
 
@@ -9,7 +9,8 @@ import { ScoreFileService } from './scorefile.service';
 })
 export class DashboardGraphsComponent {
 
-  accordionFileUploadSelected = true;
+  @Input() accordionFileUploadSelected = true;
+  @Output() accordionFileUploadSelectedChange = new EventEmitter<boolean>();
   
   constructor(private messageService: MessageService, public scoreFileService: ScoreFileService)
   {
@@ -30,7 +31,16 @@ export class DashboardGraphsComponent {
       this.scoreFileService.readDatabaseFromFile(event.files[0])
       this.messageService.add({severity: 'info', summary: 'File Uploaded', detail: ''});
       console.info("Database file uploaded sucessfuly.")
-      this.accordionFileUploadSelected = false;
+      this.accordionFileUploadToggle(false);
       return true;
+  }
+
+  /** Toggle the accordion for the file upload
+   * @param value true if the accordion shall open, false otherwise
+   */
+  accordionFileUploadToggle(value: boolean)
+  {
+    this.accordionFileUploadSelected = value;
+    this.accordionFileUploadSelectedChange.emit(value);
   }
 }

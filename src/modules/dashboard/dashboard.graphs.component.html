@@ -1,5 +1,5 @@
 <!-- File uploader -->
-<p-accordion (onOpen)="accordionFileUploadSelected=true" (onClose)="accordionFileUploadSelected=false">
+<p-accordion (onOpen)="accordionFileUploadToggle(true)" (onClose)="accordionFileUploadToggle(false)">
     <p-accordionTab header="Select a file" [selected]="accordionFileUploadSelected">
         <p-fileUpload id="fileSelector" chooseLabel="Choose" accept="*.pqb" [customUpload]="true" [auto]="true" (uploadHandler)="customUploader($event)">
             <ng-template pTemplate="toolbar">

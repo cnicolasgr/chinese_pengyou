@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { ChartData, ChartOptions, ChartTypeRegistry, TooltipItem } from 'chart.js';
 import 'chartjs-adapter-date-fns';
 import initSqlJs, { Database } from "sql.js";
+import { UtilService } from '../utils/util';
 
 @Injectable()
 export class ScoreFileService
@@ -21,7 +22,7 @@ export class ScoreFileService
 
     reviewedCards!: ReviewedCardsResponse;
 
-    constructor(){
+    constructor(private utilService: UtilService){
         this.initDatabase();
     }
 
@@ -204,7 +205,7 @@ export class ScoreFileService
 
                             // get chinese character
                             let zi = reviewedCardsCopy.values[context.dataIndex].character;
-                            zi = zi.replace('@', '');
+                            zi = zi.replaceAll('@', '');
                             labelArray.push("Last character: " + zi);
                         }                   
                         return labelArray;
@@ -337,6 +338,58 @@ export class ScoreFileService
     {
         this.prepareLineChartData(reviewedCards);
         this.prepareBarChart(reviewedCards);
+    }
+
+    /**
+     * Get all the cards that were learned
+     * @returns 
+     */
+    getLearnedCards()
+    {
+        if (!this.selectedScorefile || !this.db)
+        {
+            throw new TypeError("Invalid scorefile or database.");
+        }
+
+        console.log("Get cards learned for scorefile " + this.selectedScorefile.name + "...")
+
+        const scoreTable = `pleco_flash_scores_${this.selectedScorefile.id}`
+        const sqlCommand = `
+        SELECT ${scoreTable}.score, pleco_flash_cards.hw
+        FROM ${scoreTable} 
+        INNER JOIN pleco_flash_cards ON ${scoreTable}.card=pleco_flash_cards.id 
+        WHERE score > ${this.scoreCardLearned};`
+
+        const res = this.db.exec(sqlCommand);
+
+        if (res.length > 0)
+        {
+            console.log(res);
+        }
+
+        return res;
+    }
+
+    /**
+     * Return random learned characters
+     * @param n Number of random characters to return
+     * @returns { Array<String> } an array of string containing the random characters
+     */
+    getRandomLearnedCharacters(n: number)
+    {
+        const selectedCards = new Array<string>(n);
+        const listOfCardsLearnedQueryResult = this.getLearnedCards();
+
+        let listOfCardsLearned = listOfCardsLearnedQueryResult[0].values;
+
+        // shuffle the list of cards learned and select the first n characters
+        listOfCardsLearned = this.utilService.shuffle(listOfCardsLearned)
+        for (let i=0; i < n; i++)
+        {
+            selectedCards[i] = this.utilService.sanitizedPlecoCharacter(listOfCardsLearned[i][1] as string);
+        }
+
+        return selectedCards
     }
 }
 

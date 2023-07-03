@@ -17,6 +17,7 @@ import { AccordionModule } from 'primeng/accordion';
 import { DividerModule } from 'primeng/divider';
 import { CardModule } from 'primeng/card';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
+import { UtilService } from '../utils/util';
 
 @NgModule({
   declarations: [
@@ -38,7 +39,8 @@ import { ProgressSpinnerModule } from 'primeng/progressspinner';
   ],
   providers: [
     MessageService,
-    ScoreFileService
+    ScoreFileService,
+    UtilService
   ],
   exports: [
     DashboardGraphsComponent
