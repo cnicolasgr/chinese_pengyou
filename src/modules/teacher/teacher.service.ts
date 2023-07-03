@@ -9,7 +9,7 @@ export class TeacherService
 
     public talk$: Subject<any> = new Subject<any>();
     private openai: any;
-    isProcessing: boolean = false;
+    isProcessing = false;
 
     constructor()
     {

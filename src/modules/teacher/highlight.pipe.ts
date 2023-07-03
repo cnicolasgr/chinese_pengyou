@@ -11,7 +11,7 @@ export class HighlightPipe implements PipeTransform {
     }
 
     let highlightedText = wholeText;
-    for (let character of searchQuery)
+    for (const character of searchQuery)
     {
       const re = new RegExp(character, 'gi');
       highlightedText = highlightedText.replace(re, '<mark>$&</mark>');

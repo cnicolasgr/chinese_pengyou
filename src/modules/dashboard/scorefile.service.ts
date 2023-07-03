@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { ChartData, ChartOptions, ChartTypeRegistry, TooltipItem } from 'chart.js';
 import 'chartjs-adapter-date-fns';
 import initSqlJs, { Database } from "sql.js";
+import { UtilService } from '../utils/util';
 
 @Injectable()
 export class ScoreFileService
@@ -21,7 +22,7 @@ export class ScoreFileService
 
     reviewedCards!: ReviewedCardsResponse;
 
-    constructor(){
+    constructor(private utilService: UtilService){
         this.initDatabase();
     }
 
@@ -345,14 +346,9 @@ export class ScoreFileService
      */
     getLearnedCards()
     {
-        if (!this.selectedScorefile)
+        if (!this.selectedScorefile || !this.db)
         {
-            return;
-        }
-
-        if (!this.db)
-        {
-            return;
+            throw new TypeError("Invalid scorefile or database.");
         }
 
         console.log("Get cards learned for scorefile " + this.selectedScorefile.name + "...")
@@ -372,6 +368,28 @@ export class ScoreFileService
         }
 
         return res;
+    }
+
+    /**
+     * Return random learned characters
+     * @param n Number of random characters to return
+     * @returns { Array<String> } an array of string containing the random characters
+     */
+    getRandomLearnedCharacters(n: number)
+    {
+        const selectedCards = new Array<string>(n);
+        const listOfCardsLearnedQueryResult = this.getLearnedCards();
+
+        let listOfCardsLearned = listOfCardsLearnedQueryResult[0].values;
+
+        // shuffle the list of cards learned and select the first n characters
+        listOfCardsLearned = this.utilService.shuffle(listOfCardsLearned)
+        for (let i=0; i < n; i++)
+        {
+            selectedCards[i] = this.utilService.sanitizedPlecoCharacter(listOfCardsLearned[i][1] as string);
+        }
+
+        return selectedCards
     }
 }
 

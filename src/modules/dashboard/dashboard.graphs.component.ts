@@ -9,7 +9,7 @@ import { ScoreFileService } from './scorefile.service';
 })
 export class DashboardGraphsComponent {
 
-  @Input() accordionFileUploadSelected: boolean = true;
+  @Input() accordionFileUploadSelected = true;
   @Output() accordionFileUploadSelectedChange = new EventEmitter<boolean>();
   
   constructor(private messageService: MessageService, public scoreFileService: ScoreFileService)
