@@ -14,6 +14,10 @@ import { AccordionModule } from 'primeng/accordion';
 
 import { TeacherComponent } from './teacher.component';
 import { HighlightPipe } from './highlight.pipe';
+import { ExerciseModule } from '../exercise/exercise.module';
+import { CommonModule } from '@angular/common';
+import { ProgressSpinnerModule } from 'primeng/progressspinner';
+
 
 
 @NgModule({
@@ -22,6 +26,7 @@ import { HighlightPipe } from './highlight.pipe';
     HighlightPipe
   ],
   imports: [
+    CommonModule,
     FormsModule,
     ScrollPanelModule,
     CardModule,
@@ -29,7 +34,9 @@ import { HighlightPipe } from './highlight.pipe';
     InputTextModule,
     InputNumberModule,
     ButtonModule,
-    AccordionModule
+    AccordionModule,
+    ExerciseModule,
+    ProgressSpinnerModule
   ],
   providers: [
     TeacherService,

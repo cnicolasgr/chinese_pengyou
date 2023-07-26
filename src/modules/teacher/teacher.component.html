@@ -13,15 +13,23 @@
         <p-dropdown class="inline" [style]="{'width':'8rem'}" [options]="levels" [(ngModel)]="selectedLevel"  [editable]="true" optionLabel="name" optionValue="name"></p-dropdown>
         <p class="inline"> level about the following theme: </p>
         <input class="inline" type="text" pInputText [(ngModel)]="selectedTheme" />
-        <p class="inline"> in </p>
-        <p-inputNumber class="inline" [inputStyle]="{'width':'4rem'}" id="numberOfLines" inputId="integeronly" [(ngModel)]="selectedNumberOfLines" [allowEmpty]="false" [min]="0" [max]="100"> </p-inputNumber>
-        <p class="inline"> lines.</p>
+        <p class="inline">.</p>
         
       </ng-template> 
     </p-accordionTab>
   </p-accordion>
 
-  <p-scrollPanel [style]="{ width: '100%', height: '150px' }">
+  <!-- Story -->
+  <p-progressSpinner *ngIf="isLoadingStory;else storyPanel"></p-progressSpinner>
+  <ng-template #storyPanel>
+    <p-scrollPanel [style]="{ width: '100%', height: '150px' }">
       <p [innerHtml]="teacherAnswer | highlight: selectedCardsForStory"></p>
-  </p-scrollPanel>
+    </p-scrollPanel>
+  </ng-template>
 </p-card>
+
+  <!-- Exercise -->
+<p-progressSpinner *ngIf="exercise && !exercise.isReadyForDisplay;else exercisePanel"></p-progressSpinner>
+<ng-template #exercisePanel>
+  <exercise-form *ngIf="exercise" [exercise]="exercise"></exercise-form>
+</ng-template>
