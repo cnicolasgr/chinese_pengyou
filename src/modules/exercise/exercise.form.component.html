@@ -1,0 +1,29 @@
+<p-card *ngIf="exercise.isReadyForDisplay" header="Exercise" [subheader]="exercise.exerciseType">
+    <div>
+        <div *ngFor="let item of exercise.questions | keyvalue; let isLast = last">
+            <p><b>{{item.value.question}}</b></p>
+
+            <div class="flex flex-row gap-6">
+                <div class="align-items-center justify-content-center">
+                    <div *ngFor="let choice of item.value.choices; index as i" class="field-checkbox">
+                        <p-checkbox [disabled]="this.exercise.isCorrected" name="group" [value]="i" [(ngModel)]="exercise.selectedAnswers[item.key]"></p-checkbox>
+                        <label>{{ choice }}</label>
+                    </div>
+                </div>
+                
+                <ng-container *ngIf="exercise.isCorrected">
+                    <div class="flex align-items-center justify-content-center">
+                        <i *ngIf="this.exercise.checkAnswer(item.key);else incorrect" class="pi pi-check"></i>
+                        <ng-template #incorrect><i class="pi pi-times"></i></ng-template>
+                    </div>
+                    <p class="flex flex-grow-1 align-items-center justify-content-center">{{item.value.comment}}</p>
+                </ng-container>
+            </div>
+
+            <p-divider *ngIf="!isLast"></p-divider>
+        </div>
+    </div>
+
+    <p-button *ngIf="!this.exercise.isCorrected;else retryButton" label="Submit" (click)="exercise.submitAnswer()"></p-button>
+    <ng-template #retryButton><p-button label="Retry" (click)="exercise.retry()"></p-button></ng-template>
+</p-card>

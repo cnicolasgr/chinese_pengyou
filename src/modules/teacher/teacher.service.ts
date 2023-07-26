@@ -1,15 +1,16 @@
 import { Subject } from 'rxjs';
 import credentials from '../../../credentials.json';
 import { Injectable } from '@angular/core';
+import { Prompt, openaiMessage } from './prompts';
 const { Configuration, OpenAIApi } = require("openai");
 
 @Injectable()
 export class TeacherService
 {
-
-    public talk$: Subject<any> = new Subject<any>();
     private openai: any;
     isProcessing = false;
+    public context: openaiMessage[] = [Prompt.teacherBehavior];
+    public lastChatCompletion: any;
 
     constructor()
     {
@@ -18,38 +19,69 @@ export class TeacherService
         basePath: credentials.OPENAI_BASE_PATH
       });
 
+      // Setting the User-Agent in the front end throw an error
+      delete configuration.baseOptions.headers['User-Agent'];
+
       this.openai = new OpenAIApi(configuration);      
     }
 
 
     /**
-     * Prompt chat GPT and register new tokens to this.talk$
+     * Prompt chat GPT
      * @param question the prompt submitted to the model
      */
-    public async askQuestion(question: string)
+    public async askQuestion(question: openaiMessage, includeContext=true)
     {
       this.isProcessing = true;
       console.info("Prompt to GPT laoshi: " + question);
 
-      try {
+      let answer = undefined;
+      let message = [question];
+      this.context.push(question)
+      if (includeContext)
+      {
+        message = this.context;
+      }
+
+      try 
+      {
         const chatCompletion = await this.openai.createChatCompletion({
             model: "gpt-3.5-turbo",
-            messages: [{role: "system", content: question}],
-            // steam not supported yet... wait for release 4
+            messages: message,
+            // stream not supported yet... wait for release 4
             stream: false
         });
         console.log(chatCompletion.data);
-        this.talk$.next(chatCompletion.data);
-     
-      } catch (error: any) {
-        if (error.response) {
+
+        this.lastChatCompletion = chatCompletion.data;
+
+        // save chatGPT answer into the context
+        this.context.push({role: 'assistant', content: this.getTextAnswer()})
+        answer =  chatCompletion.data;
+      } 
+      catch (error: any) 
+      {
+        if (error.response) 
+        {
           console.log(error.response.status);
           console.log(error.response.data);
-        } else {
+        } 
+        else 
+        {
           console.log(error.message);
         }
       }
 
       this.isProcessing = false;
+      return answer;
+    }
+
+    /**
+     * Get the text output of the last chat completion
+     * @returns The string containing the proper model answer
+     */
+    public getTextAnswer(): string
+    {
+      return this.lastChatCompletion.choices[0].message.content;
     }
 }

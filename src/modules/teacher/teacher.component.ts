@@ -1,6 +1,8 @@
 import { Component, EventEmitter, Output } from '@angular/core';
 import { TeacherService } from './teacher.service';
 import { ScoreFileService } from '../dashboard/scorefile.service';
+import { Prompt } from './prompts';
+import { ExerciseForm } from '../exercise/exercise.form';
 
 @Component({
   selector: 'app-teacher',
@@ -22,24 +24,30 @@ export class TeacherComponent {
     sidebarVisible = false;
     selectedCardsForStory: string[] = [];
 
+    // loaders
+    isLoadingStory = false;
+
+    exercise: ExerciseForm | undefined;
 
     constructor(public teacherService: TeacherService, private scorefileService: ScoreFileService)
     {
         this.teacherService = new TeacherService();
-
-        this.teacherService.talk$.subscribe({
-        next: (data) => this.teacherAnswer = data.choices[0].message.content,
-        });
     }
 
     /**
      * Start the story
      * @param $event the mouse event
      */
-    public startStory($event: MouseEvent)
+    public async startStory($event: MouseEvent)
     {
         // prevent event bubbling to the accordion component
         $event.stopPropagation();
+
+        // reset exercise
+        this.exercise = undefined;
+
+        // set loader
+        this.isLoadingStory=true
 
         if (this.selectedLevel == "personal")
         {
@@ -50,17 +58,18 @@ export class TeacherComponent {
             }
             
             this.selectedCardsForStory = this.scorefileService.getRandomLearnedCharacters(10);
-
-            this.teacherService.askQuestion(
-                `You are a chinese teacher (you cannot speak english), tell me a story about the following theme: ${this.selectedTheme}.
-                The story shall be written using simplified mandarin characters and shall be composed of ${this.selectedNumberOfLines} lines.
-                You must absolutely use the following characters: ${this.selectedCardsForStory}`);
-            
-            return
         }
+        await this.teacherService.askQuestion(Prompt.story(this.selectedTheme, this.selectedLevel ,this.selectedCardsForStory));
+        this.teacherAnswer = this.teacherService.getTextAnswer();
+        this.isLoadingStory=false
 
-        this.teacherService.askQuestion(
-            `You are a chinese teacher (you cannot speak english), tell me a story suited for a student with a ${this.selectedLevel} about the following theme: ${this.selectedTheme}.
-            The story shall be written using simplified mandarin characters and shall be composed of ${this.selectedNumberOfLines} lines.`);
+        this.giveExercise()
+    }
+
+    public giveExercise()
+    {
+        let exercise = new ExerciseForm(this.teacherService);
+        exercise.requestNew()
+        this.exercise = exercise;
     }
 }
