@@ -18,6 +18,7 @@ import { DividerModule } from 'primeng/divider';
 import { CardModule } from 'primeng/card';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { UtilService } from '../utils/util';
+import { NgxCsvParserModule } from 'ngx-csv-parser';
 
 @NgModule({
   declarations: [
@@ -35,7 +36,8 @@ import { UtilService } from '../utils/util';
     AccordionModule,
     DividerModule,
     CardModule,
-    ProgressSpinnerModule
+    ProgressSpinnerModule,
+    NgxCsvParserModule
   ],
   providers: [
     MessageService,

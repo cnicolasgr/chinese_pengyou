@@ -19,6 +19,10 @@
                 <p-dropdown id="scoreFile" (onChange)="scoreFileService.listReviewedCards()" [options]="scoreFileService.scorefiles" [(ngModel)]="scoreFileService.selectedScorefile" optionLabel="name"></p-dropdown>
             </div>
             <div class="field col">
+                <label for="skill">Select skill:</label>
+                <p-dropdown id="skill" (onChange)="scoreFileService.listReviewedCards()" [options]="scoreFileService.skills" [(ngModel)]="scoreFileService.selectedSkill"></p-dropdown>
+            </div>
+            <div class="field col">
                 <label for="scoreCardLearned">Cards are learned if score > </label>
                 <p-inputNumber id="scoreCardLearned" (onInput)="scoreFileService.prepareCharts(scoreFileService.reviewedCards)"  inputId="integeronly" [(ngModel)]="scoreFileService.scoreCardLearned" [showButtons]="true" [allowEmpty]="false"> </p-inputNumber>
             </div>
