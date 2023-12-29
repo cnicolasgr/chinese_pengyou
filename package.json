@@ -31,14 +31,14 @@
     "openai": "^3.3.0",
     "primeflex": "^3.3.0",
     "primeicons": "^6.0.1",
-    "primeng": "^15.4.0",
+    "primeng": "^16.4.0",
     "rxjs": "~7.8.0",
     "sql.js": "^1.8.0",
     "yaml": "^2.2.1",
     "zone.js": "~0.13.3"
   },
   "devDependencies": {
-    "@angular-builders/custom-webpack": "^15.0.0",
+    "@angular-builders/custom-webpack": "^16.0.0",
     "@angular-devkit/build-angular": "^16.2.11",
     "@angular-eslint/builder": "16.3.1",
     "@angular-eslint/eslint-plugin": "16.3.1",
