@@ -15,21 +15,54 @@ export class ScoreFileService
 
     scorefiles: Scorefile[]  = [];
     selectedScorefile: undefined | Scorefile;
-    skills: Skill[]  = ['Writing', 'Vocabulary'];
-    selectedSkill: undefined | Skill;
-    scoreCardLearned = 500;
+    scoreCardLearned = 600;
 
     lineChartData: ChartData | undefined;
     lineChartOptions: ChartOptions | undefined;
     barChartData: ChartData | undefined;
     barChartOptions: ChartOptions | undefined;
 
-    reviewedCards!: ReviewedCardsResponse;
-    hskChars: CharEntry[];
+    // reviewed cards organised by categories
+    categoriesDict: CategoriesDict = {};
+
+    private _reviewedCards!: ReviewedCardsResponse;
+    get reviewedCards(): ReviewedCardsResponse
+    {
+        if (this._reviewedCards)
+        {
+            return this._reviewedCards;
+        }
+        throw new Error("Reviewed cards not loaded yet.");
+    }
+
+    // HSK char hashmap organised by level, extracted from the HSK3.0-chars csv
+    hskChars: { [key: string]: CharEntry[] } = 
+    {
+        '1': [],
+        '2': [],
+        '3': [],
+        '4': [],
+        '5': [],
+        '6': [],
+        '7-9': []
+    };
+
+    // HSK vocabulary hashmap organised by level, extracted from the HSK3.0 csv
+    hskVocabulary: { [key: string]: Vocabulary[] } = 
+    {
+        '1': [],
+        '2': [],
+        '3': [],
+        '4': [],
+        '5': [],
+        '6': [],
+        '7-9': []
+    };
 
     constructor(private utilService: UtilService, private httpClient: HttpClient, private ngxCsvParser: NgxCsvParser){
         this.initDatabase();
         this.parseHskCharsCSV();
+        this.parseHskVocabularyCSV();
     }
 
     /**
@@ -50,13 +83,38 @@ export class ScoreFileService
         this.httpClient.get('assets/HSK/hsk30-chars.csv', {responseType: 'blob'})
         .subscribe(data => 
             {
-                let file = new File([data], 'sk30-chars.csv');
+                let file = new File([data], 'hsk30-chars.csv');
                 this.ngxCsvParser.parse(file, { header: true, delimiter: ',', encoding: 'utf8' })
                 .pipe().subscribe(
                     {
                         next: (result): void => 
                         {
-                            this.hskChars = result as CharEntry[];
+                            (result as CharEntry[]).forEach((el: CharEntry) => this.hskChars[el.Level].push(el));
+
+                        },
+                        error: (error: NgxCSVParserError): void => 
+                        {
+                            console.log('Error', error);
+                        }
+                    });
+            });
+    }
+
+    /**
+     * Parse the HSK3.0 file requirements for chars 
+     */
+    parseHskVocabularyCSV()
+    {
+        this.httpClient.get('assets/HSK/hsk30.csv', {responseType: 'blob'})
+        .subscribe(data => 
+            {
+                let file = new File([data], 'hsk30.csv');
+                this.ngxCsvParser.parse(file, { header: true, delimiter: ',', encoding: 'utf8' })
+                .pipe().subscribe(
+                    {
+                        next: (result): void => 
+                        {
+                            (result as Vocabulary[]).forEach((el: Vocabulary) => this.hskVocabulary[el.Level].push(el));
                         },
                         error: (error: NgxCSVParserError): void => 
                         {
@@ -71,9 +129,11 @@ export class ScoreFileService
      * Subsequently execute the readDatabase function
      * @param file The sqlLite file
      */
-    readDatabaseFromFile(file: File) {
+    readDatabaseFromFile(file: File) 
+    {
       const reader = new FileReader();
-      reader.onload = () => {
+      reader.onload = () => 
+      {
         console.info("Pleco backup file read.")
 
         this.uploadedFile = new Uint8Array(<ArrayBuffer>reader.result);
@@ -127,14 +187,8 @@ export class ScoreFileService
             return
         }
 
-        if (!this.selectedSkill)
-        {
-            console.error("Cannot list cards: no skill selected.")
-            return
-        }
-
-        let skillFilter = ` AND LOWER(pleco_flash_categories.name)='${this.selectedSkill.toLowerCase()}'`;
-        if (this.selectedSkill == 'Vocabulary')
+        let skillFilter = ` AND LOWER(pleco_flash_categories.name)='${this.selectedScorefile.name.toLowerCase()}'`;
+        if (this.selectedScorefile.name == 'Vocabulary')
         {
             skillFilter = ` AND (pleco_flash_categories.name='Level 1' OR 
             pleco_flash_categories.name='Level 2' OR
@@ -163,12 +217,12 @@ export class ScoreFileService
         {
             // get the raw result and convert it to ReviewedCardsResponse type 
             const rawResult = res[0];
-            this.reviewedCards = {columns: ["score", "firstreviewedtime", "character", "category", 'categoryName'], values: []};
+            this._reviewedCards = {columns: ["score", "firstreviewedtime", "character", "category", 'categoryName'], values: []};
             rawResult.values.forEach((value) => {
-                this.reviewedCards.values.push(value.reduce((obj, cur, i) => ({ ...obj, [this.reviewedCards.columns[i]]: cur}), {} as ReviewedCardsValues));
+                this._reviewedCards.values.push(value.reduce((obj, cur, i) => ({ ...obj, [this._reviewedCards.columns[i]]: cur}), {} as ReviewedCardsValues));
             })
-            this.prepareLineChartData(this.reviewedCards);
-            this.prepareBarChart(this.reviewedCards);
+            this.prepareLineChartData(this._reviewedCards);
+            this.prepareBarChart(this._reviewedCards);
         }
 
         return res;
@@ -304,16 +358,19 @@ export class ScoreFileService
             return;
         }
 
-        // create category labels
-        const categoriesDict: {[id: string] : {name: string, numberOfCards: number, numberOfCardsLearned: number}} = {};
+        if (!this.selectedScorefile)
+        {
+            return;
+        }
 
+        // create category labels
         let i = 1;
         while (i < 7)
         {
-            categoriesDict['Level '+i] = {name: 'Level '+i, numberOfCards: 0, numberOfCardsLearned: 0};
+            this.categoriesDict['Level '+i] = {name: 'Level '+i, numberOfCards: 0, numberOfCardsLearned: 0, cards: {}};
             i++;
         }
-        categoriesDict['Level 7-9'] = {name: 'Level 7-9', numberOfCards: 0, numberOfCardsLearned: 0};
+        this.categoriesDict['Level 7-9'] = {name: 'Level 7-9', numberOfCards: 0, numberOfCardsLearned: 0, cards: {}};
 
         // populate categories
         // use predefined pleco categories to assign vocabulary cards
@@ -323,10 +380,20 @@ export class ScoreFileService
             let categoryKey = entry.categoryName;
 
             // for characters, find the corresponding category in the CSV file
-            if (this.selectedSkill == 'Writing')
+            if (this.selectedScorefile.name == 'Writing')
             {
-                let categoryNumber = this.hskChars.find(e => e.Hanzi == entry.character)?.WritingLevel;
-                if (!categoryNumber)
+                let categoryNumber: string = '';
+                Object.values(this.hskChars).forEach((lvl: CharEntry[]) => 
+                {
+                    let findResult = lvl.find(e => e.Hanzi == entry.character);
+                    if (findResult)
+                    {
+                        categoryNumber = findResult.WritingLevel;
+                        return;
+                    }
+                });
+
+                if (categoryNumber == '')
                 {
                     console.info('Char not found in HSK requirement doc : ' + entry.character);
                     continue;
@@ -334,24 +401,25 @@ export class ScoreFileService
                 categoryKey = 'Level ' + categoryNumber;
             }
 
-            categoriesDict[categoryKey].numberOfCards++;
+            this.categoriesDict[categoryKey].cards[entry.character] = { score: entry.score };
+            this.categoriesDict[categoryKey].numberOfCards++;
             if (entry.score > this.scoreCardLearned)
             {
-                categoriesDict[categoryKey].numberOfCardsLearned++;
+                this.categoriesDict[categoryKey].numberOfCardsLearned++;
             }
         } 
 
         this.barChartData = {
-            labels: Object.values(categoriesDict).map((v) => v.name),
+            labels: Object.values(this.categoriesDict).map((v) => v.name),
             datasets: [
                 {
                     label: 'Cards reviewed',
-                    data: Object.values(categoriesDict).map((v) => v.numberOfCards),
+                    data: Object.values(this.categoriesDict).map((v) => v.numberOfCards),
                     borderWidth: 1
                 },
                 {
                     label: 'Cards learned',
-                    data: Object.values(categoriesDict).map((v) => v.numberOfCardsLearned),
+                    data: Object.values(this.categoriesDict).map((v) => v.numberOfCardsLearned),
                     borderWidth: 1
                 }
             ]
@@ -450,6 +518,26 @@ export class ScoreFileService
 
         return selectedCards
     }
+
+    /**
+     * Get the card score for a given char for the selected scorefile
+     * @param chars - The char to search for
+     * @returns The char score
+     */
+    getCardScoreByChars(chars: string): number | undefined
+    {
+        if (!this.reviewedCards)
+        {
+            throw new Error("Cards need to be loaded first");
+        }
+
+        let card = this.reviewedCards.values.find(e => this.utilService.sanitizedPlecoCharacter(e.character) == chars);
+        if (!card)
+        {
+            return undefined;
+        }
+        return card.score;
+    }
 }
 
 type Scorefile = 
@@ -468,12 +556,27 @@ type ReviewedCardsValues =
 {
     score: number, 
     firstreviewedtime: number, 
-    character: string, 
+    character: string,
     category: number,
     categoryName: string
 }
 
-type Skill = 'Writing' | 'Vocabulary';
+type CategoriesDict = 
+{
+    [id: string]: 
+    {
+        name: string, 
+        numberOfCards: number, 
+        numberOfCardsLearned: number, 
+        cards: 
+        { 
+            [character: string]: 
+            {
+                score: number
+            } 
+        } 
+    }
+}
 
 type CharEntry = 
 {
@@ -483,4 +586,19 @@ type CharEntry =
     Level: string,
     Traditional: string,
     WritingLevel: string
+}
+
+type Vocabulary =
+{
+    ID: string,
+    Simplified: string,
+    Traditional: string,
+    Pinyin: string,
+    POS: string,
+    Level: string,
+    WebNo: string,
+    WebPinyin: string,
+    OCR: string,
+    Variants: string,
+    CEDICT: string
 }

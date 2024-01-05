@@ -1,0 +1,70 @@
+
+<p-dialog [(visible)]="visible" (onShow)="onShow()" (onHide)="onHide()" [style]="{ height: '60rem' }">
+    <ng-template pTemplate="header">
+        <h1>
+            {{'Details HSK Level ' + level}}
+        </h1>
+        <p pTooltip="Number of cards learned">
+            {{ numberCardsLearned }}/{{ data.length }}
+        </p>
+    </ng-template>
+    <p-table
+    #dt1
+    [value]="data" 
+    [tableStyle]="{ 'min-width': '40rem' }"
+    [scrollable]="true"
+    [paginator]="true"
+    [rows]="100"
+    [globalFilterFields]="['item']"
+    >
+
+        <ng-template pTemplate="caption">
+            <div class="flex">
+                <button pButton label="Clear" class="p-button-outlined" icon="pi pi-filter-slash" (click)="clear(dt1)"></button>
+                <span class="p-input-icon-left ml-auto">
+                    <i class="pi pi-search"></i>
+                    <input pInputText type="text" (input)="dt1.filterGlobal($any($event.target).value, 'contains')" placeholder="Search keyword" />
+                </span>
+            </div>
+        </ng-template>
+        <ng-template pTemplate="header">
+            <tr>
+                <th pSortableColumn="item">     
+                    <div class="flex align-items-center">
+                        Item
+                        <p-columnFilter type="text" field="item" display="menu"></p-columnFilter>
+                        <p-sortIcon field="item"></p-sortIcon>
+                    </div>                
+                </th>
+                <th pSortableColumn="score">
+                    <div class="flex align-items-center">
+                        Score
+                        <p-columnFilter type="numeric" field="score" display="menu"></p-columnFilter>
+                        <p-sortIcon field="score"></p-sortIcon>
+                    </div>
+                </th>
+                <th>
+                    <div class="flex align-items-center">
+                        Learned
+                        <p-columnFilter type="boolean" field="learned" display="menu"></p-columnFilter>
+                    </div>
+                </th>
+            </tr>
+        </ng-template>
+        <ng-template pTemplate="body" let-data>
+            <tr style="height:46px">
+                <td>{{ data.item }}</td>
+                <td>
+                    <p-tag [style]="{'background-color': data.color,'min-width': '5rem'}">
+                        {{ data.score }}
+                    </p-tag>
+                </td>
+                <td>
+                    <div *ngIf="data.learned">
+                        <i class="pi pi-check-circle" style="font-size: 1.5rem" style="color: green"></i>
+                    </div>
+                </td>
+            </tr>
+        </ng-template>
+    </p-table>
+</p-dialog>

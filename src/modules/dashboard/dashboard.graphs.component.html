@@ -19,10 +19,6 @@
                 <p-dropdown id="scoreFile" (onChange)="scoreFileService.listReviewedCards()" [options]="scoreFileService.scorefiles" [(ngModel)]="scoreFileService.selectedScorefile" optionLabel="name"></p-dropdown>
             </div>
             <div class="field col">
-                <label for="skill">Select skill:</label>
-                <p-dropdown id="skill" (onChange)="scoreFileService.listReviewedCards()" [options]="scoreFileService.skills" [(ngModel)]="scoreFileService.selectedSkill"></p-dropdown>
-            </div>
-            <div class="field col">
                 <label for="scoreCardLearned">Cards are learned if score > </label>
                 <p-inputNumber id="scoreCardLearned" (onInput)="scoreFileService.prepareCharts(scoreFileService.reviewedCards)"  inputId="integeronly" [(ngModel)]="scoreFileService.scoreCardLearned" [showButtons]="true" [allowEmpty]="false"> </p-inputNumber>
             </div>
@@ -36,9 +32,10 @@
     <p-card>
         <p-chart type="line" [data]="scoreFileService.lineChartData" [options]="scoreFileService.lineChartOptions"></p-chart>
         <p-divider></p-divider>
-        <p-chart type="bar" [data]="scoreFileService.barChartData" [options]="scoreFileService.barChartOptions"></p-chart>
+        <p-chart type="bar" [data]="scoreFileService.barChartData" [options]="scoreFileService.barChartOptions" (onDataSelect)="onBarChartClicked($event)"></p-chart>
     </p-card>
 </ng-container>
 
+<app-graphs-details [visible]="showDetails" [level]="graphDetailsLevel" (hideEmitter)="onDetailsHidden()"></app-graphs-details>
 
 <p-toast></p-toast>

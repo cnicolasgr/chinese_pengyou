@@ -19,10 +19,17 @@ import { CardModule } from 'primeng/card';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { UtilService } from '../utils/util';
 import { NgxCsvParserModule } from 'ngx-csv-parser';
+import { DashboardGraphsDetailsComponent } from './dashboard.graphs.details.component';
+import { TableModule } from 'primeng/table';
+import { DialogModule } from 'primeng/dialog';
+import { TagModule } from 'primeng/tag';
+import { InputTextModule } from 'primeng/inputtext';
+import { TooltipModule } from 'primeng/tooltip';
 
 @NgModule({
   declarations: [
-    DashboardGraphsComponent
+    DashboardGraphsComponent,
+    DashboardGraphsDetailsComponent
   ],
   imports: [
     FileUploadModule,
@@ -37,7 +44,12 @@ import { NgxCsvParserModule } from 'ngx-csv-parser';
     DividerModule,
     CardModule,
     ProgressSpinnerModule,
-    NgxCsvParserModule
+    NgxCsvParserModule,
+    TableModule,
+    DialogModule,
+    TagModule,
+    InputTextModule,
+    TooltipModule
   ],
   providers: [
     MessageService,

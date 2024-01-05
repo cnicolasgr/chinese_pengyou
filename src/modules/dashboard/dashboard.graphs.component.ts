@@ -1,6 +1,7 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { MessageService } from 'primeng/api';
 import { ScoreFileService } from './scorefile.service';
+import { BarElement } from 'chart.js';
 
 @Component({
   selector: 'app-dashboard',
@@ -11,6 +12,9 @@ export class DashboardGraphsComponent {
 
   @Input() accordionFileUploadSelected = true;
   @Output() accordionFileUploadSelectedChange = new EventEmitter<boolean>();
+
+  showDetails = false;
+  graphDetailsLevel = -1;
   
   constructor(private messageService: MessageService, public scoreFileService: ScoreFileService)
   {
@@ -42,5 +46,23 @@ export class DashboardGraphsComponent {
   {
     this.accordionFileUploadSelected = value;
     this.accordionFileUploadSelectedChange.emit(value);
+  }
+
+  /**
+   * Callback invoked when clicking on the barplot
+   * @param event clicking event
+   */
+  onBarChartClicked(event: any)
+  {
+    if (event.element.element instanceof BarElement)
+    {
+      this.graphDetailsLevel = event.element.index + 1;
+      this.showDetails = true;
+    }
+  }
+
+  onDetailsHidden()
+  {
+    this.showDetails = false;
   }
 }
