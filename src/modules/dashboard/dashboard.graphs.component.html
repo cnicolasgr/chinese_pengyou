@@ -32,9 +32,10 @@
     <p-card>
         <p-chart type="line" [data]="scoreFileService.lineChartData" [options]="scoreFileService.lineChartOptions"></p-chart>
         <p-divider></p-divider>
-        <p-chart type="bar" [data]="scoreFileService.barChartData" [options]="scoreFileService.barChartOptions"></p-chart>
+        <p-chart type="bar" [data]="scoreFileService.barChartData" [options]="scoreFileService.barChartOptions" (onDataSelect)="onBarChartClicked($event)"></p-chart>
     </p-card>
 </ng-container>
 
+<app-graphs-details [visible]="showDetails" [level]="graphDetailsLevel" (hideEmitter)="onDetailsHidden()"></app-graphs-details>
 
 <p-toast></p-toast>

@@ -3,6 +3,8 @@ import { ChartData, ChartOptions, ChartTypeRegistry, TooltipItem } from 'chart.j
 import 'chartjs-adapter-date-fns';
 import initSqlJs, { Database } from "sql.js";
 import { UtilService } from '../utils/util';
+import { HttpClient } from '@angular/common/http';
+import { NgxCsvParser, NgxCSVParserError } from 'ngx-csv-parser';
 
 @Injectable()
 export class ScoreFileService
@@ -13,17 +15,54 @@ export class ScoreFileService
 
     scorefiles: Scorefile[]  = [];
     selectedScorefile: undefined | Scorefile;
-    scoreCardLearned = 500;
+    scoreCardLearned = 600;
 
     lineChartData: ChartData | undefined;
     lineChartOptions: ChartOptions | undefined;
     barChartData: ChartData | undefined;
     barChartOptions: ChartOptions | undefined;
 
-    reviewedCards!: ReviewedCardsResponse;
+    // reviewed cards organised by categories
+    categoriesDict: CategoriesDict = {};
 
-    constructor(private utilService: UtilService){
+    private _reviewedCards!: ReviewedCardsResponse;
+    get reviewedCards(): ReviewedCardsResponse
+    {
+        if (this._reviewedCards)
+        {
+            return this._reviewedCards;
+        }
+        throw new Error("Reviewed cards not loaded yet.");
+    }
+
+    // HSK char hashmap organised by level, extracted from the HSK3.0-chars csv
+    hskChars: { [key: string]: CharEntry[] } = 
+    {
+        '1': [],
+        '2': [],
+        '3': [],
+        '4': [],
+        '5': [],
+        '6': [],
+        '7-9': []
+    };
+
+    // HSK vocabulary hashmap organised by level, extracted from the HSK3.0 csv
+    hskVocabulary: { [key: string]: Vocabulary[] } = 
+    {
+        '1': [],
+        '2': [],
+        '3': [],
+        '4': [],
+        '5': [],
+        '6': [],
+        '7-9': []
+    };
+
+    constructor(private utilService: UtilService, private httpClient: HttpClient, private ngxCsvParser: NgxCsvParser){
         this.initDatabase();
+        this.parseHskCharsCSV();
+        this.parseHskVocabularyCSV();
     }
 
     /**
@@ -37,13 +76,64 @@ export class ScoreFileService
     }
 
     /**
+     * Parse the HSK3.0 file requirements for chars 
+     */
+    parseHskCharsCSV()
+    {
+        this.httpClient.get('assets/HSK/hsk30-chars.csv', {responseType: 'blob'})
+        .subscribe(data => 
+            {
+                let file = new File([data], 'hsk30-chars.csv');
+                this.ngxCsvParser.parse(file, { header: true, delimiter: ',', encoding: 'utf8' })
+                .pipe().subscribe(
+                    {
+                        next: (result): void => 
+                        {
+                            (result as CharEntry[]).forEach((el: CharEntry) => this.hskChars[el.Level].push(el));
+
+                        },
+                        error: (error: NgxCSVParserError): void => 
+                        {
+                            console.log('Error', error);
+                        }
+                    });
+            });
+    }
+
+    /**
+     * Parse the HSK3.0 file requirements for chars 
+     */
+    parseHskVocabularyCSV()
+    {
+        this.httpClient.get('assets/HSK/hsk30.csv', {responseType: 'blob'})
+        .subscribe(data => 
+            {
+                let file = new File([data], 'hsk30.csv');
+                this.ngxCsvParser.parse(file, { header: true, delimiter: ',', encoding: 'utf8' })
+                .pipe().subscribe(
+                    {
+                        next: (result): void => 
+                        {
+                            (result as Vocabulary[]).forEach((el: Vocabulary) => this.hskVocabulary[el.Level].push(el));
+                        },
+                        error: (error: NgxCSVParserError): void => 
+                        {
+                            console.log('Error', error);
+                        }
+                    });
+            });
+    }
+
+    /**
      * Convert the input file to an Array buffer and store it in memory
      * Subsequently execute the readDatabase function
      * @param file The sqlLite file
      */
-    readDatabaseFromFile(file: File) {
+    readDatabaseFromFile(file: File) 
+    {
       const reader = new FileReader();
-      reader.onload = () => {
+      reader.onload = () => 
+      {
         console.info("Pleco backup file read.")
 
         this.uploadedFile = new Uint8Array(<ArrayBuffer>reader.result);
@@ -97,15 +187,28 @@ export class ScoreFileService
             return
         }
 
+        let skillFilter = ` AND LOWER(pleco_flash_categories.name)='${this.selectedScorefile.name.toLowerCase()}'`;
+        if (this.selectedScorefile.name == 'Vocabulary')
+        {
+            skillFilter = ` AND (pleco_flash_categories.name='Level 1' OR 
+            pleco_flash_categories.name='Level 2' OR
+            pleco_flash_categories.name='Level 3' OR
+            pleco_flash_categories.name='Level 4' OR
+            pleco_flash_categories.name='Level 5' OR
+            pleco_flash_categories.name='Level 6' OR
+            pleco_flash_categories.name='Level 7-9')`;
+        }
+
         console.log("Listing reviewed cards for scorefile " + this.selectedScorefile.name + "...")
 
         const scoreTable = `pleco_flash_scores_${this.selectedScorefile.id}`
         const sqlCommand = `
-        SELECT ${scoreTable}.score, ${scoreTable}.firstreviewedtime, pleco_flash_cards.hw, pleco_flash_categoryassigns.cat
+        SELECT ${scoreTable}.score, ${scoreTable}.firstreviewedtime, pleco_flash_cards.hw, pleco_flash_categoryassigns.cat, pleco_flash_categories.name
         FROM ${scoreTable} 
         INNER JOIN pleco_flash_cards ON ${scoreTable}.card=pleco_flash_cards.id 
-        INNER JOIN pleco_flash_categoryassigns ON pleco_flash_cards.id=pleco_flash_categoryassigns.card 
-        WHERE firstreviewedtime > 0 
+        INNER JOIN pleco_flash_categoryassigns ON pleco_flash_cards.id=pleco_flash_categoryassigns.card
+        INNER JOIN pleco_flash_categories ON pleco_flash_categoryassigns.cat=pleco_flash_categories.id
+        WHERE firstreviewedtime > 0${skillFilter}
         ORDER BY firstreviewedtime ASC;`
 
         const res = this.db.exec(sqlCommand);
@@ -114,12 +217,12 @@ export class ScoreFileService
         {
             // get the raw result and convert it to ReviewedCardsResponse type 
             const rawResult = res[0];
-            this.reviewedCards = {columns: ["score", "firstreviewedtime", "character", "category"], values: []};
+            this._reviewedCards = {columns: ["score", "firstreviewedtime", "character", "category", 'categoryName'], values: []};
             rawResult.values.forEach((value) => {
-                this.reviewedCards.values.push(value.reduce((obj, cur, i) => ({ ...obj, [this.reviewedCards.columns[i]]: cur}), {} as ReviewedCardsValues));
+                this._reviewedCards.values.push(value.reduce((obj, cur, i) => ({ ...obj, [this._reviewedCards.columns[i]]: cur}), {} as ReviewedCardsValues));
             })
-            this.prepareLineChartData(this.reviewedCards);
-            this.prepareBarChart(this.reviewedCards);
+            this.prepareLineChartData(this._reviewedCards);
+            this.prepareBarChart(this._reviewedCards);
         }
 
         return res;
@@ -255,44 +358,68 @@ export class ScoreFileService
             return;
         }
 
-        // create category labels
-        const sqlCommand = `
-        SELECT id, name 
-        FROM pleco_flash_categories
-        ORDER BY id ASC;`
-
-        const categoriesRes = this.db.exec(sqlCommand);
-        const categoriesDict: {[id: number] : {name: string, numberOfCards: number, numberOfCardsLearned: number}} = {};
-
-        if (categoriesRes.length > 0)
+        if (!this.selectedScorefile)
         {
-            const rawResult = categoriesRes[0];
-            rawResult.values.forEach((value) => {
-                categoriesDict[<number>value[0]] = {name: <string>value[1], numberOfCards: 0, numberOfCardsLearned: 0};
-            })
+            return;
         }
+
+        // create category labels
+        let i = 1;
+        while (i < 7)
+        {
+            this.categoriesDict['Level '+i] = {name: 'Level '+i, numberOfCards: 0, numberOfCardsLearned: 0, cards: {}};
+            i++;
+        }
+        this.categoriesDict['Level 7-9'] = {name: 'Level 7-9', numberOfCards: 0, numberOfCardsLearned: 0, cards: {}};
 
         // populate categories
+        // use predefined pleco categories to assign vocabulary cards
+        // for characters, find the corresponding category in the CSV file
         for (const entry of reviewedCards.values)
         {
-            categoriesDict[entry.category].numberOfCards++;
+            let categoryKey = entry.categoryName;
+
+            // for characters, find the corresponding category in the CSV file
+            if (this.selectedScorefile.name == 'Writing')
+            {
+                let categoryNumber: string = '';
+                Object.values(this.hskChars).forEach((lvl: CharEntry[]) => 
+                {
+                    let findResult = lvl.find(e => e.Hanzi == entry.character);
+                    if (findResult)
+                    {
+                        categoryNumber = findResult.WritingLevel;
+                        return;
+                    }
+                });
+
+                if (categoryNumber == '')
+                {
+                    console.info('Char not found in HSK requirement doc : ' + entry.character);
+                    continue;
+                }
+                categoryKey = 'Level ' + categoryNumber;
+            }
+
+            this.categoriesDict[categoryKey].cards[entry.character] = { score: entry.score };
+            this.categoriesDict[categoryKey].numberOfCards++;
             if (entry.score > this.scoreCardLearned)
             {
-                categoriesDict[entry.category].numberOfCardsLearned++;
+                this.categoriesDict[categoryKey].numberOfCardsLearned++;
             }
-        }
+        } 
 
         this.barChartData = {
-            labels: Object.values(categoriesDict).map((v) => v.name),
+            labels: Object.values(this.categoriesDict).map((v) => v.name),
             datasets: [
                 {
                     label: 'Cards reviewed',
-                    data: Object.values(categoriesDict).map((v) => v.numberOfCards),
+                    data: Object.values(this.categoriesDict).map((v) => v.numberOfCards),
                     borderWidth: 1
                 },
                 {
                     label: 'Cards learned',
-                    data: Object.values(categoriesDict).map((v) => v.numberOfCardsLearned),
+                    data: Object.values(this.categoriesDict).map((v) => v.numberOfCardsLearned),
                     borderWidth: 1
                 }
             ]
@@ -391,6 +518,26 @@ export class ScoreFileService
 
         return selectedCards
     }
+
+    /**
+     * Get the card score for a given char for the selected scorefile
+     * @param chars - The char to search for
+     * @returns The char score
+     */
+    getCardScoreByChars(chars: string): number | undefined
+    {
+        if (!this.reviewedCards)
+        {
+            throw new Error("Cards need to be loaded first");
+        }
+
+        let card = this.reviewedCards.values.find(e => this.utilService.sanitizedPlecoCharacter(e.character) == chars);
+        if (!card)
+        {
+            return undefined;
+        }
+        return card.score;
+    }
 }
 
 type Scorefile = 
@@ -409,6 +556,49 @@ type ReviewedCardsValues =
 {
     score: number, 
     firstreviewedtime: number, 
-    character: string, 
-    category: number
+    character: string,
+    category: number,
+    categoryName: string
+}
+
+type CategoriesDict = 
+{
+    [id: string]: 
+    {
+        name: string, 
+        numberOfCards: number, 
+        numberOfCardsLearned: number, 
+        cards: 
+        { 
+            [character: string]: 
+            {
+                score: number
+            } 
+        } 
+    }
+}
+
+type CharEntry = 
+{
+    Example: string,
+    Freq: string,
+    Hanzi: string,
+    Level: string,
+    Traditional: string,
+    WritingLevel: string
+}
+
+type Vocabulary =
+{
+    ID: string,
+    Simplified: string,
+    Traditional: string,
+    Pinyin: string,
+    POS: string,
+    Level: string,
+    WebNo: string,
+    WebPinyin: string,
+    OCR: string,
+    Variants: string,
+    CEDICT: string
 }
